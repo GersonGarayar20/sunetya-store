@@ -1,0 +1,20 @@
+{
+    "name": "webkul/culqi",
+    "description": "Culqi payment gateway integration for Bagisto.",
+    "license": "MIT",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Webkul\\Culqi\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Webkul\\Culqi\\Providers\\CulqiServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

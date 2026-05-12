@@ -1,0 +1,81 @@
+<?php
+
+return [
+    [
+        'key'  => 'sales.payment_methods.culqi',
+        'name' => 'culqi::app.title',
+        'info' => 'culqi::app.description',
+        'sort' => 3,
+        'fields' => [
+            [
+                'name'          => 'active',
+                'title'         => 'admin::app.configuration.index.sales.payment-methods.status',
+                'type'          => 'boolean',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ], [
+                'name'          => 'title',
+                'title'         => 'admin::app.configuration.index.sales.payment-methods.title',
+                'type'          => 'text',
+                'depends'       => 'active:1',
+                'validation'    => 'required_if:active,1',
+                'channel_based' => true,
+                'locale_based'  => true,
+            ], [
+                'name'          => 'description',
+                'title'         => 'admin::app.configuration.index.sales.payment-methods.description',
+                'type'          => 'textarea',
+                'depends'       => 'active:1',
+                'channel_based' => true,
+                'locale_based'  => true,
+            ], [
+                'name'          => 'sandbox',
+                'title'         => 'admin::app.configuration.index.sales.payment-methods.sandbox',
+                'type'          => 'boolean',
+                'depends'       => 'active:1',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ], [
+                'name'          => 'api_test_public_key',
+                'title'         => 'culqi::app.fields.test-public-key',
+                'info'          => 'admin::app.configuration.index.sales.payment-methods.applicable-sandbox',
+                'type'          => 'password',
+                'depends'       => 'active:1',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ], [
+                'name'          => 'api_test_secret_key',
+                'title'         => 'culqi::app.fields.test-secret-key',
+                'info'          => 'admin::app.configuration.index.sales.payment-methods.applicable-sandbox',
+                'type'          => 'password',
+                'depends'       => 'active:1',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ], [
+                'name'          => 'api_public_key',
+                'title'         => 'culqi::app.fields.public-key',
+                'info'          => 'admin::app.configuration.index.sales.payment-methods.applicable-production',
+                'type'          => 'password',
+                'depends'       => 'active:1',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ], [
+                'name'          => 'api_secret_key',
+                'title'         => 'culqi::app.fields.secret-key',
+                'info'          => 'admin::app.configuration.index.sales.payment-methods.applicable-production',
+                'type'          => 'password',
+                'depends'       => 'active:1',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ], [
+                'name'          => 'sort',
+                'title'         => 'admin::app.configuration.index.sales.payment-methods.sort-order',
+                'type'          => 'number',
+                'depends'       => 'active:1',
+                'validation'    => 'required_if:active,1|integer|min:1',
+                'channel_based' => true,
+                'locale_based'  => false,
+            ],
+        ],
+    ],
+];
