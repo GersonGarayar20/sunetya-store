@@ -95,6 +95,7 @@ class CulqiController extends Controller
                 'culqi_outcome'   => $charge['outcome']['type'] ?? null,
             ];
 
+            /** @var \Webkul\Sales\Models\Order $order */
             $order = $this->orderRepository->create($data);
 
             $this->orderRepository->update(['status' => 'processing'], $order->id);
@@ -174,7 +175,11 @@ class CulqiController extends Controller
         }
 
         $type = $payload['type'] ?? null;
-        $data = $payload['data']['object'] ?? $payload['data'] ?? [];
+
+        // Culqi puts the object directly under 'data' (not 'data.object' like Stripe).
+        // Handle the rare case where Culqi sends 'data' as a JSON string.
+        $raw = $payload['data'] ?? [];
+        $data = is_string($raw) ? (json_decode($raw, true) ?? []) : $raw;
 
         Log::info('Culqi webhook received', ['type' => $type, 'data_id' => $data['id'] ?? null]);
 
@@ -198,8 +203,19 @@ class CulqiController extends Controller
 
         if (! $tx) {
             // Webhook arrived before the synchronous charge handler created the order.
-            // Acknowledge so Culqi does not keep retrying; the sync flow will record the order.
             return response()->json(['status' => 'no_order_yet'], 200);
+        }
+
+        // Idempotency: already paid or refunded — do not overwrite.
+        if (in_array($tx->status, ['paid', 'refunded'], true)) {
+            return response()->json(['status' => 'already_processed'], 200);
+        }
+
+        // Skip if the charge is authorized but not yet captured.
+        if (! ($charge['capture'] ?? true)) {
+            Log::info('Culqi webhook: charge not yet captured, skipping', ['charge_id' => $chargeId]);
+
+            return response()->json(['status' => 'not_captured'], 200);
         }
 
         $existing = json_decode($tx->data, true) ?: [];
@@ -209,6 +225,15 @@ class CulqiController extends Controller
             'data'       => json_encode(array_merge($existing, ['webhook' => $charge])),
             'updated_at' => now(),
         ]);
+
+        // Ensure the order is in processing state (covers edge cases where sync flow failed).
+        if ($tx->order_id) {
+            $order = $this->orderRepository->find($tx->order_id);
+
+            if ($order && $order->status === 'pending') {
+                $this->orderRepository->update(['status' => 'processing'], $tx->order_id);
+            }
+        }
 
         return response()->json(['status' => 'ok'], 200);
     }
@@ -225,6 +250,20 @@ class CulqiController extends Controller
 
         if (! $tx) {
             return response()->json(['status' => 'no_order'], 200);
+        }
+
+        // Idempotency: already failed or refunded — do not overwrite.
+        if (in_array($tx->status, ['failed', 'refunded'], true)) {
+            return response()->json(['status' => 'already_processed'], 200);
+        }
+
+        // Do not downgrade a successfully paid transaction.
+        if ($tx->status === 'paid') {
+            Log::warning('Culqi webhook: received charge.failed for already-paid transaction', [
+                'transaction_id' => $chargeId,
+            ]);
+
+            return response()->json(['status' => 'conflict_ignored'], 200);
         }
 
         $existing = json_decode($tx->data, true) ?: [];
@@ -255,6 +294,11 @@ class CulqiController extends Controller
 
         if (! $tx) {
             return response()->json(['status' => 'no_order'], 200);
+        }
+
+        // Idempotency: already refunded.
+        if ($tx->status === 'refunded') {
+            return response()->json(['status' => 'already_processed'], 200);
         }
 
         $existing = json_decode($tx->data, true) ?: [];

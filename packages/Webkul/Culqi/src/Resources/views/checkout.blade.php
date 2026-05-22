@@ -22,7 +22,7 @@
 <body>
     <div class="wrap">
         <h1>{{ trans('culqi::app.checkout.heading') }}</h1>
-        <p class="amount">Total a pagar:</p>
+        <p class="amount">{{ trans('culqi::app.checkout.total-label') }}</p>
         <div class="total">{{ core()->formatBasePrice($cart->base_grand_total) }}</div>
 
         <p class="amount" style="margin-top: 24px;">Email: <strong>{{ $cart->customer_email }}</strong></p>

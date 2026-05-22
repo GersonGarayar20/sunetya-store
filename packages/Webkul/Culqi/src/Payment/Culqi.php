@@ -50,18 +50,37 @@ class Culqi extends Payment
         return $url ? Storage::url($url) : bagisto_asset('images/cash-on-delivery.png', 'shop');
     }
 
+    public function isSandbox(): bool
+    {
+        $adminValue = $this->getConfigData('sandbox');
+
+        if ($adminValue !== null) {
+            return (bool) $adminValue;
+        }
+
+        return (bool) env('CULQI_SANDBOX', true);
+    }
+
     public function getPublicKey(): ?string
     {
-        return $this->getConfigData('sandbox')
-            ? $this->getConfigData('api_test_public_key')
-            : $this->getConfigData('api_public_key');
+        if ($this->isSandbox()) {
+            return $this->getConfigData('api_test_public_key')
+                ?: (env('CULQI_TEST_PUBLIC_KEY') ?: null);
+        }
+
+        return $this->getConfigData('api_public_key')
+            ?: (env('CULQI_PUBLIC_KEY') ?: null);
     }
 
     public function getSecretKey(): ?string
     {
-        return $this->getConfigData('sandbox')
-            ? $this->getConfigData('api_test_secret_key')
-            : $this->getConfigData('api_secret_key');
+        if ($this->isSandbox()) {
+            return $this->getConfigData('api_test_secret_key')
+                ?: (env('CULQI_TEST_SECRET_KEY') ?: null);
+        }
+
+        return $this->getConfigData('api_secret_key')
+            ?: (env('CULQI_SECRET_KEY') ?: null);
     }
 
     public function hasValidCredentials(): bool
@@ -89,10 +108,15 @@ class Culqi extends Payment
             $currency = 'PEN';
         }
 
-        $response = Http::withToken($this->getSecretKey())
+        $http = Http::withToken($this->getSecretKey())
             ->acceptJson()
-            ->asJson()
-            ->post(self::CHARGES_URL, [
+            ->asJson();
+
+        if ($this->isSandbox()) {
+            $http = $http->withoutVerifying();
+        }
+
+        $response = $http->post(self::CHARGES_URL, [
                 'amount'        => $amountInCents,
                 'currency_code' => $currency,
                 'email'         => $cart->customer_email,
@@ -133,9 +157,13 @@ class Culqi extends Payment
      */
     public function fetchEvent(string $eventId)
     {
-        $response = Http::withToken($this->getSecretKey())
-            ->acceptJson()
-            ->get(self::EVENTS_URL.'/'.$eventId);
+        $http = Http::withToken($this->getSecretKey())->acceptJson();
+
+        if ($this->isSandbox()) {
+            $http = $http->withoutVerifying();
+        }
+
+        $response = $http->get(self::EVENTS_URL.'/'.$eventId);
 
         return $response->successful() ? $response->json() : false;
     }

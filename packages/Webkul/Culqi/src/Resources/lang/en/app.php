@@ -23,9 +23,10 @@ return [
     ],
 
     'checkout' => [
-        'heading'    => 'Pay with Culqi',
-        'pay-button' => 'Pay :amount',
-        'cancel'     => 'Cancel',
-        'processing' => 'Processing payment...',
+        'heading'     => 'Pay with Culqi',
+        'total-label' => 'Total to pay:',
+        'pay-button'  => 'Pay :amount',
+        'cancel'      => 'Cancel',
+        'processing'  => 'Processing payment...',
     ],
 ];
