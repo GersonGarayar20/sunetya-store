@@ -152,26 +152,29 @@ class CulqiController extends Controller
     {
         $rawBody   = $request->getContent();
         $signature = $request->header('X-Culqi-Signature');
-
-        $verified = $this->culqi->verifyWebhookSignature($rawBody, $signature);
-
-        $payload = json_decode($rawBody, true);
-
-        if (! $verified) {
-            $eventId = $payload['id'] ?? null;
-
-            if (! $eventId || ! $this->culqi->fetchEvent($eventId)) {
-                Log::warning(trans('culqi::app.response.webhook-invalid'), [
-                    'signature_header' => $signature,
-                    'event_id'         => $eventId,
-                ]);
-
-                return response()->json(['error' => 'invalid signature'], 401);
-            }
-        }
+        $payload   = json_decode($rawBody, true);
 
         if (! is_array($payload)) {
             return response()->json(['error' => 'invalid payload'], 400);
+        }
+
+        // Culqi test environment does not send X-Culqi-Signature — skip verification in sandbox.
+        // In production, verify HMAC signature with API fallback.
+        if (! $this->culqi->isSandbox()) {
+            $verified = $this->culqi->verifyWebhookSignature($rawBody, $signature);
+
+            if (! $verified) {
+                $eventId = $payload['id'] ?? null;
+
+                if (! $eventId || ! $this->culqi->fetchEvent($eventId)) {
+                    Log::warning(trans('culqi::app.response.webhook-invalid'), [
+                        'signature_header' => $signature,
+                        'event_id'         => $eventId,
+                    ]);
+
+                    return response()->json(['error' => 'invalid signature'], 401);
+                }
+            }
         }
 
         $type = $payload['type'] ?? null;
